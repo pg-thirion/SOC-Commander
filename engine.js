@@ -278,7 +278,7 @@ const actions = {"block":"Block source IP","isolate":"Isolate host","revoke":"Re
 function createGame(mode="standard", seed=Date.now()) {
  const limits={training:180,standard:125,expert:95};
  if(!Object.hasOwn(limits,mode)) mode="standard";
- let n=seed>>>0; const order=scenarios.map((_,i)=>i);
+ seed=Number.isFinite(seed)?Math.trunc(seed):Date.now(); let n=seed>>>0; const order=scenarios.map((_,i)=>i);
  for(let i=order.length-1;i>0;i--){n=(Math.imul(n,1664525)+1013904223)>>>0;const j=n%(i+1);[order[i],order[j]]=[order[j],order[i]];}
  // Rotate the full campaign into three waves, each seven alerts.
  return {version:1,mode,seed,order,shift:1,turn:0,health:100,business:100,score:0,streak:0,bestStreak:0,correct:0,wrong:0,missed:0,investigated:0,limit:limits[mode],cases:[],history:[],blocked:[],status:"playing"};
@@ -290,11 +290,14 @@ function deadline(g,c){const base={critical:18,high:24,medium:32,low:40}[severit
 function log(g,msg){g.history.push({shift:g.shift,turn:g.turn,msg});}
 function clamp(v){return Math.max(0,Math.min(100,v));}
 function finishCheck(g){if(g.health<=0||g.business<=0){g.status="lost";return;}if(g.cases.every(c=>c.status!=="open"))g.status=g.shift===3?"won":"briefing";}
-function tick(g,cost=1){if(g.status!=="playing")return false;g.turn+=cost;for(const c of g.cases){if(c.status==="open"&&(g.turn>=g.limit||g.turn>=deadline(g,c))){c.status="missed";g.missed++;g.streak=0;const threat=scenarios[c.idx][9]!=="dismiss";g.health=clamp(g.health-(threat?({critical:24,high:15,medium:8,low:4}[severity(c)]):0));g.business=clamp(g.business-3);g.score-=threat?80:25;log(g,c.id+" expired without resolution.");}}finishCheck(g);return true;}
+function tick(g,cost=1){if(g.status!=="playing"||!Number.isSafeInteger(cost)||cost<=0)return false;g.turn=Math.min(g.limit,g.turn+cost);for(const c of g.cases){if(c.status==="open"&&(g.turn>=g.limit||g.turn>=deadline(g,c))){c.status="missed";g.missed++;g.streak=0;const threat=scenarios[c.idx][9]!=="dismiss";g.health=clamp(g.health-(threat?({critical:24,high:15,medium:8,low:4}[severity(c)]):0));g.business=clamp(g.business-3);g.score-=threat?80:25;log(g,c.id+" expired without resolution.");}}finishCheck(g);return true;}
 function inspect(g,id){const c=g.cases.find(x=>x.id===id);if(g.status!=="playing"||!c||c.status!=="open"||c.arrive>g.turn||c.seen>=3)return false;c.seen++;g.investigated++;log(g,id+" evidence "+c.seen+" reviewed.");tick(g,1);return true;}
 function act(g,id,action){const c=g.cases.find(x=>x.id===id);if(g.status!=="playing"||!c||c.status!=="open"||c.arrive>g.turn||!Object.hasOwn(actions,action))return false;const s=scenarios[c.idx];const good=action===s[9];c.status=good?"correct":"wrong";c.action=action;const amount=good?100+c.seen*15+Math.min(g.streak,5)*10:-60;c.delta=amount;g.score+=amount;if(good){g.correct++;g.streak++;g.bestStreak=Math.max(g.bestStreak,g.streak);if(action==="block"&&!g.blocked.includes(s[4]))g.blocked.push(s[4]);}else{g.wrong++;g.streak=0;if(s[9]!=="dismiss")g.health=clamp(g.health-({critical:20,high:12,medium:7,low:4}[s[2]]));if(action!=="dismiss")g.business=clamp(g.business-12);}
  log(g,id+" · "+actions[action]+" · "+(good?"Correct":"Incorrect"));tick(g,2);return true;}
 function next(g){if(g.status!=="briefing")return false;g.shift++;openShift(g);return true;}
-function note(g,id,value){const c=g.cases.find(x=>x.id===id);if(!c||c.arrive>g.turn)return false;c.note=String(value).slice(0,500);return true;}
-const SOC={scenarios,actions,start,deadline,tick,inspect,act,next,note};
+function note(g,id,value){const c=g.cases.find(x=>x.id===id);if(g.status!=="playing"||!c||c.status!=="open"||c.arrive>g.turn)return false;c.note=String(value).slice(0,500);return true;}
+for(const scenario of scenarios) Object.freeze(scenario);
+Object.freeze(scenarios);
+Object.freeze(actions);
+const SOC=Object.freeze({scenarios,actions,start,deadline,tick,inspect,act,next,note});
 if(typeof module !== 'undefined') module.exports=SOC;
