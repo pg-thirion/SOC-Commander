@@ -45,3 +45,24 @@ function uiTests(SOC,source){
 }
 console.log('Engine assertions passed:', tests(SOC));
 console.log('UI smoke checks passed:',uiTests(SOC,fs.readFileSync(path.join(__dirname,'app.js'),'utf8')));
+
+function featureTests(S){
+ let n=0;const check=(v,m)=>{if(!v)throw Error(m);n++};
+ for(const mode of ["training","standard","expert"]){for(let seed=0;seed<150;seed++){
+  const g=S.start(mode,seed),c=g.cases[0];check(S.validExtra(g),"new state");
+  check(S.triage(g,c.id,"star",true),"star");check(S.queue(g,{starred:true}).length===1,"star filter");check(S.triage(g,c.id,"assigned","Tier 2"),"assignment");check(S.triage(g,c.id,"verdict","Suspicious"),"classification");check(S.triage(g,c.id,"confidence","High"),"confidence");check(!S.triage(g,c.id,"assigned","invalid"),"invalid triage");check(!S.triage(g,g.cases[6].id,"star",true),"incoming guard");check(S.queue(g,{search:S.scenarios[c.idx][4]}).some(x=>x.id===c.id),"IP search");check(S.queue(g,{category:S.scenarios[c.idx][1]}).every(x=>S.scenarios[x.idx][1]===S.scenarios[c.idx][1]),"category");check(S.hint(g,c.id)===(mode!=="expert"),"hint policy");check(!S.hint(g,c.id),"duplicate hint");check(typeof S.hintText(c)==="string","hint text");check(S.note(g,c.id,"handover"),"note");
+  while(g.status==="playing"||g.status==="briefing"){
+   check(S.validExtra(JSON.parse(JSON.stringify(g))),"extra state roundtrip");
+   if(g.status==="briefing"){check(S.next(g),"next");check(g.archive.length===(g.shift-1)*7,"archive size");continue;}
+   const q=S.queue(g,{status:"open"});if(!q.length){check(S.advance(g),"next event");continue;}
+   const x=q[0];check(S.act(g,x.id,S.scenarios[x.idx][9]),"resolve");
+  }
+  check(g.status==="won"&&g.correct===21,"campaign");check(g.archive.length===14&&S.allCases(g).length===21,"full history");check(g.archive.find(x=>x.id===c.id).note==="handover","archive notes");check(S.stats(g).accuracy===100,"accuracy");check(S.stats(g).meanResponse>=0,"response time");check(S.controls(g).length===S.scenarios.filter(x=>x[9]!=="dismiss").length,"control log");check(S.assets(g).length>5,"inventory");check(S.badges(g).find(x=>x[0]==="Perfect campaign")[1],"badge");check(S.report(g).includes("handover"),"report");check(S.validExtra(g),"final state");
+ }}
+ check(S.dailySeed(new Date("2026-11-26T00:00:00Z"))===20261126,"daily seed");
+ const legacy=S.start("standard",5);delete legacy.archive;for(const c of legacy.cases){for(const k of ["star","assigned","verdict","confidence","resolvedAt","hints"])delete c[k];}
+ check(S.validExtra(S.upgrade(legacy)),"legacy save migration");
+ const bad=S.start("standard",4);bad.cases[0].confidence="<script>";check(!S.validExtra(bad),"reject invalid confidence");
+ return n;
+}
+console.log('Feature assertions passed:',featureTests(SOC));

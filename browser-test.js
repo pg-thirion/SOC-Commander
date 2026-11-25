@@ -45,7 +45,7 @@ async function campaign(page,base,viewport,mode){
  await noOverflow();
  let g=await state(page),c=g.cases[0];
  await click(page,'[data-case="'+c.id+'"]');
- await click(page,"#inspect");
+ await click(page,"#star"); assert.equal((await state(page)).cases[0].star,true); await page.locator("[data-triage=assigned]").selectOption("Tier 2"); await page.locator("[data-triage=verdict]").selectOption("Suspicious"); await page.locator("[data-triage=confidence]").selectOption("High"); await page.locator("#starred").check(); assert.equal(await page.locator(".alert").count(),1); await page.locator("#starred").uncheck(); await page.locator("#search").fill(SOC.scenarios[c.idx][4]); assert(await page.locator(".alert").count()>=1); await page.locator("#search").fill(""); await click(page,"#inspect");
  assert.equal((await state(page)).cases[0].seen,1);
  const note='<img src=x onerror=alert(1)> & <script>bad()</script>';
  await page.locator("#notes").fill(note);
@@ -82,6 +82,7 @@ async function campaign(page,base,viewport,mode){
  assert.match(await page.locator("#banner").innerText(),/Rank S/);
  await page.reload();assert.match(await page.locator("#banner").innerText(),/Rank S/);
  await noOverflow();
+ for(const tool of ["intel","assets","controls","stats","archive","badges","report"]){await click(page,'[data-tool="'+tool+'"]'); assert(await page.locator("#toolbox").isVisible()); assert((await page.locator("#toolcontent").innerText()).length>0||tool==="report"); await page.keyboard.press("Escape"); await page.locator("#toolbox").waitFor({state:"hidden"});}
  await click(page,"#again");assert(await page.locator("#welcome").isVisible());
  await click(page,"#start");
  g=await state(page);c=g.cases[0];

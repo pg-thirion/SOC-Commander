@@ -10,7 +10,7 @@ No dependencies, API keys, build tools or backend are required. From the reposit
 python -m http.server 8000
 ```
 
-Open http://localhost:8000. Alternatively, serve the repository as a static website on GitHub Pages or another static hosting provider. For GitHub Pages, select **GitHub Actions** as the publishing source in repository Settings > Pages. The Verify and publish workflow runs regression and browser tests, publishes only the five runtime assets, and checks the live entry point. No personal access token is needed after Pages is enabled. The expected URL is https://pg-thirion.github.io/SOC-Commander/.
+Open http://localhost:8000. Alternatively, serve the repository as a static website on GitHub Pages or another static hosting provider. Deployment target: Vercel, with static runtime files built into dist. GitHub Actions verifies the engine and cross-browser workflows independently.
 
 ## Gameplay
 
@@ -53,3 +53,7 @@ All incidents and company assets are fictional. External-looking IP addresses ar
 ## Security and release notes
 
 The runtime has no external dependencies, network requests, analytics or backend. A restrictive meta Content Security Policy disallows external scripts, inline scripts and styles, network requests, object embedding and form submission. Local save data is validated and untrusted text is HTML-escaped. GitHub Pages controls HTTP response headers; a meta policy cannot enforce frame-ancestors. Notes are stored for the current shift; the activity feed and cumulative metrics persist across shifts. Scores and saves remain user-editable because the game is entirely client-side.
+
+## Version 2 features
+
+Search by alert, asset or IP; source filters; priority, arrival and name sorting; starred incidents and starred filter; next alert and next event navigation; tier assignment; verdict and confidence classification; three limited analyst hints (disabled on Commander); seeded replay and UTC daily challenge; offline indicator lookup; asset inventory; containment register; cross-shift case archive; persistent handover notes; accuracy, mean response and evidence coverage; source-specific performance; ten achievements; activity search; downloadable text report. Previous saves are migrated when possible; historical notes from old releases cannot be reconstructed.
