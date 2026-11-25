@@ -9,17 +9,22 @@
  function valid(x){
   if(!x||x.version!==1||!Object.hasOwn(labels,x.mode)||!["playing","briefing","won","lost"].includes(x.status)||!Number.isInteger(x.shift)||x.shift<1||x.shift>3)return false;
   if(!Array.isArray(x.order)||x.order.length!==21||new Set(x.order).size!==21||!x.order.every(i=>Number.isInteger(i)&&i>=0&&i<21))return false;
-  if(!["turn","health","business","score","streak","bestStreak","correct","wrong","missed","investigated","limit"].every(k=>Number.isFinite(x[k])))return false;
-  if(x.turn<0||x.health<0||x.health>100||x.business<0||x.business>100||x.limit<=0)return false;
-  return Array.isArray(x.cases)&&x.cases.length===7&&x.cases.every((c,i)=>c.idx===x.order[(x.shift-1)*7+i]&&c.id==="INC-"+String(x.shift*100+i+1)&&Number.isInteger(c.arrive)&&c.arrive>=0&&Number.isInteger(c.seen)&&c.seen>=0&&c.seen<=3&&Object.hasOwn(statuses,c.status)&&typeof c.note==="string"&&Number.isFinite(c.delta)&&(c.action===null||Object.hasOwn(SOC.actions,c.action)))&&Array.isArray(x.history)&&x.history.every(h=>h&&typeof h.msg==="string"&&Number.isFinite(h.shift)&&Number.isFinite(h.turn))&&Array.isArray(x.blocked)&&x.blocked.every(ip=>typeof ip==="string");
+  if(!["turn","health","business","score","streak","bestStreak","correct","wrong","missed","investigated","limit","seed"].every(k=>Number.isSafeInteger(x[k])))return false;
+  if(x.limit!==({training:180,standard:125,expert:95}[x.mode])||x.turn<0||x.turn>x.limit||x.health<0||x.health>100||x.business<0||x.business>100||x.score< -1680||x.score>4200)return false;
+  if([x.correct,x.wrong,x.missed,x.streak,x.bestStreak].some(n=>n<0||n>21)||x.correct+x.wrong+x.missed>x.shift*7||x.investigated<0||x.investigated>63||x.streak>x.bestStreak||x.bestStreak>x.correct)return false;
+  if(!Array.isArray(x.cases)||x.cases.length!==7||!x.cases.every((c,i)=>c&&c.idx===x.order[(x.shift-1)*7+i]&&c.id==="INC-"+String(x.shift*100+i+1)&&c.arrive===(i<3?0:(i-2)*3)&&Number.isInteger(c.seen)&&c.seen>=0&&c.seen<=3&&Object.hasOwn(statuses,c.status)&&typeof c.note==="string"&&c.note.length<=500&&Number.isSafeInteger(c.delta)&&c.delta>=-60&&c.delta<=195&&((["correct","wrong"].includes(c.status)&&Object.hasOwn(SOC.actions,c.action))||(["open","missed"].includes(c.status)&&c.action===null))))return false;
+  if(x.status==="playing"&&(x.health===0||x.business===0||x.cases.every(c=>c.status!=="open")))return false;
+  if(["briefing","won"].includes(x.status)&&(x.health===0||x.business===0||x.cases.some(c=>c.status==="open")||(x.status==="won")!==(x.shift===3)))return false;
+  if(x.status==="lost"&&x.health>0&&x.business>0)return false;
+  return Array.isArray(x.history)&&x.history.length<=84&&x.history.every(h=>h&&typeof h.msg==="string"&&h.msg.length<=200&&Number.isSafeInteger(h.shift)&&h.shift>=1&&h.shift<=x.shift&&Number.isSafeInteger(h.turn)&&h.turn>=0&&h.turn<=x.limit)&&Array.isArray(x.blocked)&&x.blocked.length<=21&&new Set(x.blocked).size===x.blocked.length&&x.blocked.every(ip=>SOC.scenarios.some(s=>s[4]===ip&&s[9]==="block"));
  }
- try{const stored=JSON.parse(localStorage.getItem(key));if(valid(stored))g=stored;}catch{}
+ try{const raw=localStorage.getItem(key);if(raw){if(raw.length>100000)throw Error("oversize");const stored=JSON.parse(raw);if(valid(stored))g=stored;else throw Error("invalid");}}catch{$("saveerror").textContent="Saved campaign unavailable or invalid. Start a new campaign to continue.";}
  function save(){try{if(g)localStorage.setItem(key,JSON.stringify(g));$("saveerror").textContent="";}catch{$("saveerror").textContent="Local storage unavailable. Progress will not survive a reload.";}}
  function time(t){return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");}
  function visible(){return g.cases.filter(c=>c.arrive<=g.turn||c.status!=="open");}
  function active(){return g?.cases.find(c=>c.id===selected);}
  function sev(s){return '<span class="severity '+esc(s)+'">'+esc(s)+'</span>';}
- function metric(label,value,bar){return '<div class="metric"><span>'+label+'</span><b>'+esc(value)+'</b>'+(bar?'<div class="meter '+(value<40?"danger":"")+'" role="meter" aria-label="'+label+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+value+'"><i style="width:'+value+'%"></i></div>':"")+'</div>';}
+ function metric(label,value,bar){return '<div class="metric"><span>'+label+'</span><b>'+esc(value)+'</b>'+(bar?'<progress class="meter '+(value<40?"danger":"")+'" aria-label="'+label+'" max="100" value="'+value+'">'+value+'%</progress>':"")+'</div>';}
  function render(){
   $("welcome").hidden=!!g;$("game").hidden=!g;$("restart").hidden=!g;
   if(!g)return;
