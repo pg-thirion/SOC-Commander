@@ -14,6 +14,10 @@ function tests(SOC){
  assert(!SOC.inspect(g,c.id),"evidence cap");const correct=SOC.scenarios[c.idx][9];const wrong=Object.keys(SOC.actions).find(k=>k!==correct);assert(SOC.act(g,c.id,wrong)&&g.wrong===1&&g.score<0,"penalty");
  let timeout=SOC.start("standard",3);SOC.tick(timeout,1000);assert(timeout.missed===7,"expired cases");
  while(timeout.status==="briefing"){SOC.next(timeout);SOC.tick(timeout,1000);}assert(timeout.status==="lost","loss condition");assert(!SOC.next(timeout)&&!SOC.tick(timeout),"terminal guard");
+ const boundary=SOC.start("standard",1), first=boundary.cases[0];
+ for(const cost of [0,-1,NaN,Infinity,0.5,Number.MAX_SAFE_INTEGER+1])assert(!SOC.tick(boundary,cost)&&boundary.turn===0,"reject invalid time advance");
+ SOC.tick(boundary,Number.MAX_SAFE_INTEGER);assert(boundary.turn===boundary.limit,"clock stays within shift limit");assert(!SOC.note(boundary,first.id,"late"),"cannot edit closed incident");
+ assert(Object.isFrozen(SOC)&&Object.isFrozen(SOC.scenarios)&&Object.isFrozen(SOC.scenarios[0]),"immutable reference data");
  return n;
 }
 function uiTests(SOC,source){
@@ -35,7 +39,9 @@ function uiTests(SOC,source){
  click("response",{closest:()=>({dataset:{action:SOC.scenarios[c.idx][9]},disabled:false})});check(element("actionconfirm").open,"confirm dialog");click("confirmact");check(read().correct===1,"action");
  click("wait");check(read().turn===4,"advance");
  click("restart");check(element("confirm").open,"restart confirmation");click("confirmnew");check(!element("welcome").hidden,"restart welcome");
- return 10;
+ storage.set("soc-commander-v1","{bad");launch();check(!element("welcome").hidden,"invalid save recovers");
+ storage.set("soc-commander-v1",JSON.stringify({...SOC.start("standard",1),turn:9999}));launch();check(!element("welcome").hidden,"out-of-range save rejected");
+ return 12;
 }
 console.log('Engine assertions passed:', tests(SOC));
 console.log('UI smoke checks passed:',uiTests(SOC,fs.readFileSync(path.join(__dirname,'app.js'),'utf8')));
