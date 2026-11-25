@@ -2,6 +2,10 @@
 
 A browser-based, fictional Security Operations Centre analyst game. Defend Northstar Industries across three shifts by reviewing incoming alerts, investigating evidence, and selecting an appropriate primary response.
 
+## Live demo
+
+[Play SOC Commander on Vercel](https://soc-commander.vercel.app/)
+
 ## Play locally
 
 No dependencies, API keys, build tools or backend are required. From the repository root:
@@ -52,7 +56,7 @@ All incidents and company assets are fictional. External-looking IP addresses ar
 
 ## Security and release notes
 
-The runtime has no external dependencies, network requests, analytics or backend. A restrictive meta Content Security Policy disallows external scripts, inline scripts and styles, network requests, object embedding and form submission. Local save data is validated and untrusted text is HTML-escaped. GitHub Pages controls HTTP response headers; a meta policy cannot enforce frame-ancestors. Notes are stored for the current shift; the activity feed and cumulative metrics persist across shifts. Scores and saves remain user-editable because the game is entirely client-side.
+The runtime has no external dependencies, network requests, analytics or backend. A restrictive meta Content Security Policy disallows external scripts, inline scripts and styles, network requests, object embedding and form submission. Local save data is validated and untrusted text is HTML-escaped. Vercel supplies additional HTTP security headers, including frame-ancestors protection. Notes, archived cases, activity and cumulative metrics persist across shifts. Scores and saves remain user-editable because the game is entirely client-side.
 
 ## Version 2 features
 
